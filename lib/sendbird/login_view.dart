@@ -7,8 +7,9 @@ import 'package:image_picker/image_picker.dart';
 import 'package:sign_in_flutter/constants/constants.dart';
 import 'package:sign_in_flutter/repositories/auth_repository.dart';
 import 'package:sign_in_flutter/repositories/send_bird_auth.dart';
-import 'package:sign_in_flutter/repositories/send_bird_repository.dart';
+import 'package:sign_in_flutter/widgets/custom_progress_bar.dart';
 import 'package:sign_in_flutter/widgets/custom_text_field.dart';
+import 'package:sign_in_flutter/widgets/loading_text.dart';
 
 class LoginView extends StatefulWidget {
   @override
@@ -22,6 +23,7 @@ class LoginViewState extends State<LoginView> {
   final _nameTextController = TextEditingController();
   final _nameKey = GlobalKey<FormState>();
   bool _enableSignInButton = false;
+  bool isLoading = false;
   var uuid;
   File _image;
    final picker = ImagePicker();
@@ -32,9 +34,6 @@ class LoginViewState extends State<LoginView> {
   }
   // Getting Current User Info
   gettingCurrentUser() async {
-    // final gettingListOfUser = await SendBirdRepository().fetchSendbirdUser(appId: "28A97237-32B3-4FA8-A220-2A9B8BB17026");
-    // var data = jsonDecode(gettingListOfUser.body);
-    // print('gettting Send bird User $data');
     final uid = (await AuthRepository().currentUser).uid;
     setState(() {
       uuid = uid;
@@ -42,10 +41,18 @@ class LoginViewState extends State<LoginView> {
     _userIdController.text = uuid;
     _appIdController.text = "28A97237-32B3-4FA8-A220-2A9B8BB17026";
   }
+  
 
   @override
   Widget build(BuildContext context) {
+     if (isLoading) {
+      return CustomPageProgressBar(
+          loadingText: LoadingText(
+        textStyle: TextStyle(fontSize: 20),
+      ));
+    }
     return Scaffold(
+      resizeToAvoidBottomInset: false,
       backgroundColor: Colors.white,
       body: body(context),
     );
@@ -62,7 +69,14 @@ class LoginViewState extends State<LoginView> {
   }
 
   Widget body(BuildContext context) {
+   if (isLoading) {
+      return CustomPageProgressBar(
+          loadingText: LoadingText(
+        textStyle: TextStyle(fontSize: 20),
+      ));
+    }
     return Scaffold(
+      resizeToAvoidBottomInset: false,
        backgroundColor: ColorPickers.whiteColor,
       appBar: _buildAppbar(),
       body: Container(
@@ -77,6 +91,7 @@ class LoginViewState extends State<LoginView> {
                 widthFactor: 1,
                 child: _signInButton(context, _enableSignInButton),
               )
+              
             ],
           )),
     );
@@ -157,7 +172,6 @@ class LoginViewState extends State<LoginView> {
 
   Widget _signInButton(BuildContext context, bool enabled) {
     if (enabled == false) {
-      // Disable the sign in button if required data not entered
       return TextButton(
         style: ButtonStyle(
             backgroundColor: MaterialStateProperty.all<Color>(Colors.grey),
@@ -175,12 +189,24 @@ class LoginViewState extends State<LoginView> {
           backgroundColor: MaterialStateProperty.all<Color>(Color(0xFFFFAB40)),
           foregroundColor: MaterialStateProperty.all<Color>(Colors.white)),
       onPressed: () async{
-        SendBirdAuth().connect(_appIdController.text, _userIdController.text, _nameTextController.text).then((user) {
-          print('chekcing USer ${user.sessionToken}');
+        setState(() {
+          isLoading = true;
+        });
+        final user = await SendBirdAuth().createUser(_userIdController.text, _nameTextController.text, _image);
+        final response = json.decode(user.body);
+        if (user.statusCode == 200) {
+           await SendBirdAuth().connect(_appIdController.text, _userIdController.text, _nameTextController.text,response['access_token']).then((user) {
+             setState(() {
+               isLoading = false;
+             });
               Navigator.pushNamed(context, '/channel_list');
         }).catchError((error) {
+          setState(() {
+            isLoading = false;
+          });
           print('login_view: _signInButton: ERROR: $error');
         });
+        }
       },
       child: Text(
         "Sign In",

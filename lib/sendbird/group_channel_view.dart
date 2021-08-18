@@ -1,16 +1,22 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:dash_chat/dash_chat.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:provider/provider.dart';
 import 'package:sendbird_sdk/sendbird_sdk.dart';
 import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'package:sign_in_flutter/constants/constants.dart';
 import 'package:sign_in_flutter/profile/guest_profile.dart';
-import 'package:sign_in_flutter/profile/profile.dart';
 import 'package:sign_in_flutter/repositories/auth_repository.dart';
-import 'package:sign_in_flutter/sendbird/attchment_modal.dart';
+import 'package:sign_in_flutter/sendbird/components/file_message_item.dart';
+import 'package:sign_in_flutter/sendbird/components/message_input.dart';
+import 'package:sign_in_flutter/sendbird/components/user_message_item.dart';
 import 'package:sign_in_flutter/widgets/page_size.dart';
+
+import 'components/channel_view_modal.dart';
 
 class GroupChannelView extends StatefulWidget {
   final GroupChannel groupChannel;
@@ -27,29 +33,43 @@ class _GroupChannelViewState extends State<GroupChannelView>
   final picker = ImagePicker();
   File result;
   var currentUser;
+  ChannelViewModel model;
+  bool channelLoaded = false;
+  var allUserRecord;
   final AuthRepository _authRepository = AuthRepository();
   @override
   void initState() {
     super.initState();
+    _viewUserInfo();
+    _loadMessage();
     _getCurrentUser();
     getMessages(widget.groupChannel);
     SendbirdSdk().addChannelEventHandler(widget.groupChannel.channelUrl, this);
   }
+  _viewUserInfo() async {
+     final headers = {
+       "Content-Type": "application/json",
+       "Api-Token": "bfa9466e49bbd7aa58d8aa6684f8860d823102a5" };
+    final res = await http.get(Uri.parse('https://api-28A97237-32B3-4FA8-A220-2A9B8BB17026.sendbird.com/v3/users'), headers: headers);
+    allUserRecord = json.decode(res.body);
+  }
   _getCurrentUser() async{
     currentUser = await _authRepository.currentUser.then((value) => value.uid);
+  }
+  _loadMessage() {
+      model = ChannelViewModel(widget.groupChannel.channelUrl);
+    model.loadChannel().then((value) {
+      setState(() {
+        channelLoaded = true;
+      });
+      model.loadMessages(reload: true);
+    });
   }
 
   @override
   void dispose() {
     SendbirdSdk().removeChannelEventHandler(widget.groupChannel.channelUrl);
     super.dispose();
-  }
-
-  @override
-  onMessageReceived(channel, message) {
-    setState(() {
-      _messages.add(message);
-    });
   }
 
   Future<void> getMessages(GroupChannel channel) async {
@@ -66,13 +86,26 @@ class _GroupChannelViewState extends State<GroupChannelView>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      resizeToAvoidBottomInset: false,
-      key: _key,
-       endDrawer: _drawerWidget(widget.groupChannel,),
-       backgroundColor: Colors.white,
-      appBar: _buildAppbar(),
-      body: body(context),
+    return ChangeNotifierProvider<ChannelViewModel>(
+       create: (context) => model,
+      child: (!channelLoaded) ?
+      Scaffold(
+              body: Center(
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ):
+       Scaffold(
+        resizeToAvoidBottomInset: false,
+        key: _key,
+         endDrawer: _drawerWidget(widget.groupChannel,),
+         backgroundColor: Colors.white,
+        appBar: _buildAppbar(),
+        body: body(context),
+      ),
     );
   }
 
@@ -146,7 +179,9 @@ class _GroupChannelViewState extends State<GroupChannelView>
                                                   width: 1,
                                               ),
                                             ),
-                                            // child: Image.network(channel.members[index].profileUrl),
+                                            child: ClipRRect(
+                               borderRadius: BorderRadius.circular(8.8),
+                              child: Image.network( channel.members[index].profileUrl,fit: BoxFit.cover,height: 47, width: 47.2, )),
                                   ),
                                       SizedBox(width: 20,),
                                   GestureDetector(
@@ -185,106 +220,161 @@ class _GroupChannelViewState extends State<GroupChannelView>
       elevation: 0,
     );
   }
-    // Get Image From Gallery .....
-  Future _getImageFromGallery() async {
-     final modal = AttachmentModal(context: context);
-    final file = await modal.getFile();
-     onSendFileMessage(file);
-  }
-  // upload a image to sendbird..
-  void onSendFileMessage(File file) async {
-    final params = FileMessageParams.withFile(file);
-    final preMessage =
-        widget.groupChannel.sendFileMessage(params, onCompleted: (msg, error) {
-      final index =
-          _messages.indexWhere((element) => element.requestId == msg.requestId);
-      if (index != -1) _messages.removeAt(index);
-      _messages = [msg, ..._messages];
-      _messages.sort((a, b) => b.createdAt.compareTo(a.createdAt));
-    });
-
-    _messages = [preMessage, ..._messages];
-
-  }
 
   Widget body(BuildContext context) {
     ChatUser user = asDashChatUser(SendbirdSdk().currentUser);
     return Container(
        height: displayHeight(context),
           width: displayWidth(context),
-            // margin: EdgeInsets.only(left: 20, right: 20),
       child: 
       Padding(
-        padding: const EdgeInsets.fromLTRB(0, 0, 0, 40),
+        padding: const EdgeInsets.fromLTRB(0, 0, 0, 20),
         child: Column(
           children: [
             _memberListView(context,widget.groupChannel, user),
-            _openDrawer(context),
             SizedBox(height: 20),
-            Expanded(
-              flex: 2,
-              child: Container(
-                margin: EdgeInsets.only(left: 20, right: 20),
-                child: DashChat(
-                  scrollToBottom : true,
-                  dateFormat: DateFormat("E, MMM d"),
-                  timeFormat: DateFormat.jm(),
-                  showUserAvatar: true,
-                  alwaysShowSend: true,
-                  key: Key(widget.groupChannel.channelUrl),
-                  onSend: (ChatMessage message) async {
-                    var sentMessage =
-                        widget.groupChannel.sendUserMessageWithText(message.text);
-                    setState(() {
-                      _messages.add(sentMessage);
-                    });
-                  },
-
-                  textBeforeImage: true,
-                  onPressAvatar: (ChatUser user,) {
-                          if (user.uid == currentUser) {
-                             Navigator.push(context, MaterialPageRoute(builder: (context) => ProfileScreen(chat: true)));
-                          } else {
-                            print('called else ${widget.groupChannel.members[1].userId}');
-                          }
-                            
-                          },
-                   trailing: <Widget>[
-                            IconButton(
-                              icon: Icon(Icons.photo),
-                              onPressed: (){
-                               _getImageFromGallery();
-                              },
-                            )
-                   ],
-                  sendOnEnter: true,
-                  textInputAction: TextInputAction.send,
-                  user: user,
-                  messages: asDashChatMessages(_messages),
-                  inputDecoration:
-                      InputDecoration.collapsed(hintText: "Type a message here..."),
-                  messageDecorationBuilder: (ChatMessage msg, bool isUser) {
-                    return BoxDecoration(
-                      borderRadius: BorderRadius.all(Radius.circular(20.0)),
-                      color: isUser
-                          ? Theme.of(context).primaryColor
-                          : Colors.grey[200], // example
-                    );
-                  },
-                inputContainerStyle: BoxDecoration(
-                   borderRadius: BorderRadius.circular(10.0),
-                            border: Border.all(
-                              color: ColorPickers.blackColor,
-                              width: 1,
-                            ),
-                )
-                ),
-              ),
-            ),
+          Consumer<ChannelViewModel>(
+                        builder: (context, value, child) {
+                          return _messageContainer(context);
+                        },
+                      ),
+            
+            _inputContainer(context),
           ],
         ),
       ),
     );
+  }
+  // Display Message Container
+  Widget _messageContainer(BuildContext context) {
+    return Expanded(
+          child: Container(
+            margin: EdgeInsets.only(left: 15, right: 15),
+              decoration: BoxDecoration(
+                          color: ColorPickers.whiteColor,
+                          borderRadius: BorderRadius.circular(10.0),
+                          border: Border.all(
+                            color: ColorPickers.blackColor,
+                            width: 1,
+                          ),
+                        ),
+                       
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                ListView.builder(
+                  controller: model.lstController,
+                  itemCount: model.itemCount,
+                  shrinkWrap: true,
+                  reverse: true,
+                  keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.only(top: 10, bottom: 10),
+                  itemBuilder: (context, index) {
+                    if (index == model.messages.length && model.hasNext) {
+                      return Center(
+                        child: Container(
+                          width: 30,
+                          height: 30,
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                    }
+
+                    final message = model.messages[index];
+                    final prev = (index < model.messages.length - 1)
+                        ? model.messages[index + 1]
+                        : null;
+                    final next = index == 0 ? null : model.messages[index - 1];
+
+                    if (message is FileMessage) {
+                      return FileMessageItem(
+                        curr: message,
+                        prev: prev,
+                        next: next,
+                        model: model,
+                        isMyMessage: message.isMyMessage,
+                        onPress: (pos) {
+                          //
+                        },
+                        onLongPress: (pos) {
+                          model.showMessageMenu(
+                            context: context,
+                            message: message,
+                            pos: pos,
+                          );
+                        },
+                      );
+                    } 
+                    // else if (message is AdminMessage) {
+                    //   return AdminMessageItem(curr: message, model: model);
+                    // } 
+                    else if (message is UserMessage) {
+                      return UserMessageItem(
+                        curr: message,
+                        prev: prev,
+                        next: next,
+                        model: model,
+                        isMyMessage: message.isMyMessage,
+                        onPress: (pos) {
+                          //
+                        },
+                        onLongPress: (pos) {
+                          model.showMessageMenu(
+                            context: context,
+                            message: message,
+                            pos: pos,
+                          );
+                        },
+                      );
+                    } 
+                    else {
+                      //undefined message type
+                      return Container();
+                    }
+                  },
+                ),
+                   Container(
+       margin: EdgeInsets.only(top: 20),
+       child: Align(
+         alignment: Alignment.topRight,
+          child: GestureDetector(
+            onTap: () {
+               _key.currentState.openEndDrawer();
+            },
+            child: Container(
+              color: ColorPickers.buttonBg,
+              width: 10,
+              height: 65,
+            ),
+          ),
+        ),
+     ),
+              ],
+            ),
+      ),
+    );
+  }
+  // Input Text Container
+  Widget _inputContainer(BuildContext context) {
+    return  MessageInput(
+                            onPressPlus: () {
+                              model.showPlusMenu(context);
+                            },
+                            onPressSend: (text) {
+                              model.onSendUserMessage(text);
+                              setState(() {
+                                
+                              });
+                            },
+                            onEditing: (text) {
+                              model.onUpdateMessage(text);
+                            },
+                            onChanged: (text) {
+                              model.onTyping(text != '');
+                            },
+                            placeholder: model.selectedMessage?.message,
+                            // isEditing: editing,
+                          );
   }
   // Navigate to Gust Profile
   _navigateToGustProfile(otherProfile) {
@@ -295,6 +385,7 @@ class _GroupChannelViewState extends State<GroupChannelView>
   _memberListView(BuildContext context, GroupChannel channel, ChatUser user) {
     
     return Container(
+       margin: EdgeInsets.only(left: 15, right: 15),
       height: 50,
       width: displayWidth(context),
         child: ListView.builder(
@@ -302,7 +393,7 @@ class _GroupChannelViewState extends State<GroupChannelView>
                 padding: EdgeInsets.zero,
                 scrollDirection: Axis.horizontal,
                 itemCount: channel.members.length,
-                itemBuilder: (BuildContext context, int index){ 
+                itemBuilder: (BuildContext context, int index){
                   if(user.uid == channel.members[index].userId) {
                     return Container();
                   }else {
@@ -324,8 +415,37 @@ class _GroupChannelViewState extends State<GroupChannelView>
                         },
                         child: Container(
                           child: Center(
-                            child: Text(
-                               channel.members[index].nickname, style: TextStyle(color: ColorPickers.blackColor),),
+                            child:  ClipRRect(
+                                 borderRadius: BorderRadius.circular(8.8),
+                                child: Image.network( channel.members[index].profileUrl,fit: BoxFit.cover,height: 47, width: 47.2, )
+                                ),
+                    // For show User Status Start Here //
+                        //     Stack(
+                        //       children: [
+                        //         ClipRRect(
+                        //          borderRadius: BorderRadius.circular(8.8),
+                        //         child: Image.network( channel.members[index].profileUrl,fit: BoxFit.cover,height: 47, width: 47.2, )
+                        //         ),
+                        //         Align(
+                        //           alignment: Alignment.bottomRight,
+                        //           child: Container(
+                        //              height: 10,
+                        //             width: 10,
+                        //             decoration: BoxDecoration(
+                        //           color: Colors.red,
+                        //           borderRadius: BorderRadius.circular(4.0),
+                        //           border: Border.all(
+                        //             color: ColorPickers.blackColor,
+                        //             width: 1,
+                        //   ),
+                        // ),
+                        //           ),
+                        //         ),
+                        //       ],
+                        //     )
+                        // For show User Status End Here //
+                            // child: Text(
+                            //    channel.members[index].nickname, style: TextStyle(color: ColorPickers.blackColor),),
                           )),
                       ),
                     );
@@ -335,46 +455,6 @@ class _GroupChannelViewState extends State<GroupChannelView>
               ),
       );
   }
-  // Open Drawer 
-  Widget _openDrawer(BuildContext context) {
-     return Align(
-       alignment: Alignment.bottomRight,
-        child: GestureDetector(
-          onTap: () => {
-             _key.currentState.openEndDrawer()
-          },
-          child: Container(
-            color: ColorPickers.buttonBg,
-            width: 10,
-            height: 65,
-          ),
-        ),
-      );
-
-  }
-
-  List<ChatMessage> asDashChatMessages(List<BaseMessage> messages) {
-    // BaseMessage is a Sendbird class
-    // ChatMessage is a DashChat class
-    List<ChatMessage> result = [];
-    if (messages != null) {
-      messages.forEach((message) {
-        User user = message.sender;
-        if (user == null) {
-          return;
-        }
-        result.add(
-          ChatMessage(
-            createdAt: DateTime.fromMillisecondsSinceEpoch(message.createdAt),
-            text: message.message,
-            user: asDashChatUser(user),
-          ),
-        );
-      });
-    }
-    return result;
-  }
-
   ChatUser asDashChatUser(User user) {
     return ChatUser(
       name: user.nickname,

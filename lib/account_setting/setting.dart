@@ -34,7 +34,7 @@ class _SettingPageState extends State<SettingPage> {
       backgroundColor: ColorPickers.whiteColor,
       elevation: 0,
     ),
-      bottomNavigationBar: BottomNavigation(),
+      // bottomNavigationBar: BottomNavigation(),
       body: SafeArea(
         child: Container(
           width: displayWidth(context),

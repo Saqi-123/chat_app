@@ -62,7 +62,7 @@ void initState() {
       backgroundColor: ColorPickers.whiteColor,
       elevation: 0,
     ),
-      bottomNavigationBar: BottomNavigation(),
+      // bottomNavigationBar: BottomNavigation(),
       body: SingleChildScrollView(
         child: Container(
           height: displayHeight(context),

@@ -28,6 +28,7 @@ dependencies:
   cloud_firestore: "^0.16.0+1"
   firebase_storage: "^7.0.0"
   firebase_auth: "^0.20.1"
+  cached_network_image: ^2.0.0
   google_sign_in: "^4.5.1"
   # Email_Validator
   email_validator: ^2.0.1
@@ -39,10 +40,12 @@ dependencies:
   loading_gifs: ^0.3.0
   webview_flutter: ^2.0.9
   google_fonts: ^1.1.2
+  visibility_detector: ^0.2.0
   flutter_tags: "^0.4.9+1"
   fluttertoast: ^8.0.7
   provider: ^5.0.0
   http: ^0.12.2
+  path: ^1.8.0
   # Send_bird
   sendbird_sdk: ^3.0.11
   dash_chat: ^1.1.15

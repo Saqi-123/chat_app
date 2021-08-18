@@ -1,6 +1,8 @@
+import 'package:dash_chat/dash_chat.dart';
 import 'package:flutter/material.dart';
 import 'package:sendbird_sdk/sendbird_sdk.dart';
 import 'package:sign_in_flutter/constants/constants.dart';
+import 'package:sign_in_flutter/repositories/auth_repository.dart';
 import 'package:sign_in_flutter/sendbird/group_channel_view.dart';
 import 'package:sign_in_flutter/widgets/bottom_navigation.dart';
 
@@ -14,7 +16,8 @@ class CreateChannelView extends StatefulWidget {
 class _CreateChannelViewState extends State<CreateChannelView> {
   final Set<User> _selectedUsers = {};
   final List<User> _availableUsers = [];
-
+  var currentUser;
+  final AuthRepository _authRepository = AuthRepository();
   Future<List<User>> getUsers() async {
     try {
       final query = ApplicationUserListQuery();
@@ -40,6 +43,7 @@ class _CreateChannelViewState extends State<CreateChannelView> {
   @override
   void initState() {
     super.initState();
+    _getCurrentUser();
     getUsers().then((users) {
       setState(() {
         _availableUsers.clear();
@@ -48,6 +52,10 @@ class _CreateChannelViewState extends State<CreateChannelView> {
     }).catchError((e) {
       print('initState: ERROR: $e');
     });
+  }
+  // Getting Current User ID.......
+   _getCurrentUser() async{
+    currentUser = await _authRepository.currentUser.then((value) => value.uid);
   }
 
   @override
@@ -109,6 +117,7 @@ class _CreateChannelViewState extends State<CreateChannelView> {
         itemCount: _availableUsers.length,
         itemBuilder: (context, index) {
           User user = _availableUsers[index];
+          if (user.userId == currentUser) return Container();
           return CheckboxListTile(
             title: Text(user.nickname.isEmpty ? user.userId : user.nickname,
                 style: TextStyle(color: Colors.black)),

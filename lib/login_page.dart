@@ -60,25 +60,29 @@ class _LoginPageState extends State<LoginPage> {
     }
     return Scaffold(
       appBar: appBar,
-      body: Container(
-        width: displayWidth(context),
-        color: Colors.white,
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.max,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              _loginTitle(),
-              _signInWithGoogle(),
-              // _signInWithFacebook(),
-              SizedBox(height: 15),
-              _divider(),
-              SizedBox(height: 15),
-              _loginWithEmailAndPass(),
-              SizedBox(height: 15),
-              _loginButton(),
-              _forgotPassword(),
-            ],
+      body: Center(
+        child: SingleChildScrollView(
+          child: Container(
+            width: displayWidth(context),
+            color: Colors.white,
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: <Widget>[
+                  _loginTitle(),
+                  _signInWithGoogle(),
+                  // _signInWithFacebook(),
+                  SizedBox(height: 15),
+                  _divider(),
+                  SizedBox(height: 15),
+                  _loginWithEmailAndPass(),
+                  SizedBox(height: 15),
+                  _loginButton(),
+                  _forgotPassword(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -153,50 +157,6 @@ class _LoginPageState extends State<LoginPage> {
       ),
     );
   }
-  // Login with Facebook ...
-  // Widget _signInWithFacebook() {
-  //   return Container(
-  //     width: displayWidth(context),
-  //     margin: EdgeInsets.only(left: 35, right: 35),
-  //     child: OutlineButton(
-  //       splashColor: Colors.grey,
-  //       onPressed: () {
-  //         signInWithFacebook().then((result) {
-  //           if (result != null) {
-  //             Navigator.of(context).push(
-  //               MaterialPageRoute(
-  //                 builder: (context) {
-  //                   return FirstScreen();
-  //                 },
-  //               ),
-  //             );
-  //           }
-  //         });
-  //       },
-  //       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10.7)),
-  //       highlightElevation: 0,
-  //       borderSide: BorderSide(color: Colors.grey),
-  //       child: Padding(
-  //         padding: const EdgeInsets.fromLTRB(0, 10, 0, 10),
-  //         child: Row(
-  //           mainAxisSize: MainAxisSize.min,
-  //           mainAxisAlignment: MainAxisAlignment.center,
-  //           children: <Widget>[
-  //             // Images.google_image,
-  //             Padding(
-  //               padding: const EdgeInsets.only(left: 10),
-  //               child: Text(
-  //                 'Login with Facebook',
-  //                 style: login_button
-  //               ),
-  //             )
-  //           ],
-  //         ),
-  //       ),
-  //     ),
-  //   );
-  // }
-
 // Divider...
   Widget _divider() {
     return Container(
@@ -357,6 +317,9 @@ class _LoginPageState extends State<LoginPage> {
           ),
         );
         }
+        setState(() {
+              isLoading = false;
+            });
   }
   }
   // Cheeck If User already store data in firestore ....

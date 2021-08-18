@@ -64,6 +64,30 @@ class RestRepository {
       throw e;
     }
   }
+// ********************************************************************************** 
+//                         Upload User Profile Image SendBird Image to Firebase 
+// ********************************************************************************** 
+
+Future uploadImage(String id, File image) async {
+    try {
+      // upload images to storage bucket and get urls
+      final storageRef = getRootFolderForSendBirdProfileImages(
+        _storage,
+        id,
+      );
+      var filename = basename(image.path);
+      var ref = storageRef.child('$filename');
+
+      final uploadTask = ref.putFile(image);
+      final snapshot = await uploadTask;
+      final downloadURL = await snapshot.ref.getDownloadURL();
+
+      return downloadURL;
+    } catch (e) {
+      throw e;
+    }
+  }
+
  // ********************************************************************************** 
   //                            Get User Profile ......
   // ********************************************************************************** 
@@ -95,6 +119,16 @@ class RestRepository {
     String uid,
   ) =>
       storage.ref().child('user/$uid/private/image');
+
+// ********************************************************************************** 
+//                   Upload User Profile image into firebase storage
+// ********************************************************************************** 
+
+ static Reference getRootFolderForSendBirdProfileImages(
+    FirebaseStorage storage,
+    String uid,
+  ) =>
+      storage.ref().child('sendBird/$uid/private/user/profile_image');
 
 // ********************************************************************************** 
 //               Save the image link into "User_date" into cloud_firestore....
@@ -172,6 +206,8 @@ Future updateUserProfile(String id, String name,String username, String bio, Str
       return Future.error(e);
     }
   }
+
+  
 // ********************************************************************************** 
 //                    Fetch the following and follow User Count
 // ********************************************************************************** 

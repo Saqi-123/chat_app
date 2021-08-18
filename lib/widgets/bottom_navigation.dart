@@ -20,7 +20,6 @@ class _BottomNavigationState extends State<BottomNavigation> {
     _navigateToScreen(index);
   }
   void _navigateToScreen(int indxxx) {
-    print('chkecing INdex $indxxx');
      if (indxxx == 0) {
     Navigator.push(context, MaterialPageRoute(builder: (context) => ChatScreen()));
     }
