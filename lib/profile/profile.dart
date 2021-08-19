@@ -110,8 +110,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
     switch (value) {
       case 'Logout':
       signOutGoogle();
-            Navigator.of(ContextKeeper.buildContext).pushAndRemoveUntil(MaterialPageRoute(builder: (context) =>
-              LoginPage()), (Route<dynamic> route) => false);
+      print('called');
+            // Navigator.of(ContextKeeper.buildContext).pushAndRemoveUntil(MaterialPageRoute(builder: (context) =>
+            //   LoginPage()), (Route<dynamic> route) => false);
+            Navigator.of(context).push(
+        MaterialPageRoute(builder: (_) => LoginPage(), fullscreenDialog: true));
 
         break;
       case 'Settings':

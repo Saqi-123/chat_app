@@ -69,7 +69,8 @@ checkingUser(String uuid) async {
     } else { return "not found";}
   } catch (e) {
       print('login_view: connect: ERROR: $e');
-      throw e;
+      return "not found";
+      // throw e;
     }
 }
  

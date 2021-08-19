@@ -30,25 +30,32 @@ class _ChatScreenState extends State<ChatScreen> {
 
   }
   _gettingCurrentUser() async {
+    
      User user = await _authRepository.currentUser;
+     final currentUserId = user.uid;
     userRegister =await SendBirdAuth().checkingUser(user.uid);
-    if (userRegister['found'] == 'found') {
-     final user =  await SendBirdAuth().connect('28A97237-32B3-4FA8-A220-2A9B8BB17026', userRegister['body']['user_id'], userRegister['body']['nickname'],userRegister['body']['access_token']).then((user) {
+
+    if (userRegister == 'not found') {
+      setState(() {
+      isUserExist =  false;
+       uuid = currentUserId;
+       isLoading = false;
+    });
+    }else if (userRegister['found'] == 'found') {
+       final user =  await SendBirdAuth().connect('28A97237-32B3-4FA8-A220-2A9B8BB17026', currentUserId, userRegister['body']['nickname'],userRegister['body']['access_token']).then((user) {
         }).catchError((error) {
           print('login_view: _signInButton: ERROR: $error');
         });
-    }
-     
-     if (userRegister['found'] == 'found') {
       setState(() {
       isUserExist =  true;
-       uuid = user.uid;
+       uuid = currentUserId;
        isLoading = false;
     });
-    }else {
+    }
+    else {
       setState(() {
       isUserExist =  false;
-       uuid = user.uid;
+       uuid = currentUserId;
        isLoading = false;
     });
     }
